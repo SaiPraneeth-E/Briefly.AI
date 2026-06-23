@@ -225,20 +225,25 @@ def get_secret(key, default=""):
 st.sidebar.markdown("### 🔑 API Authentication (Optional)")
 
 gemini_default = get_secret("GEMINI_API_KEY")
-gemini_key = st.sidebar.text_input(
+gemini_key_input = st.sidebar.text_input(
     "Google Gemini API Key",
-    value=gemini_default,
+    value="",
     type="password",
+    placeholder="••••••••••••••••" if gemini_default else "Enter API key...",
     help="Provide a free Google Gemini API Key to run summaries remotely on Gemini 1.5 Flash. This executes the entire NLP pipeline in under 1.5 seconds, requires 0MB local RAM, and supports massive documents."
 )
+gemini_key = gemini_key_input if gemini_key_input else gemini_default
 
 hf_default = get_secret("HF_API_TOKEN")
-hf_token = st.sidebar.text_input(
+hf_token_input = st.sidebar.text_input(
     "Hugging Face User Access Token",
-    value=hf_default,
+    value="",
     type="password",
+    placeholder="••••••••••••••••" if hf_default else "Enter token...",
     help="Provide a Hugging Face Access Token (starts with hf_) to run models remotely via HF Serverless Inference API (under 3s)."
 )
+hf_token = hf_token_input if hf_token_input else hf_default
+
 
 if gemini_key:
     st.sidebar.success("🚀 Gemini 1.5 Flash API Active")

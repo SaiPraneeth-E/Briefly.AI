@@ -7,3 +7,5 @@ venv/
 output_docs/
 test_out.docx
 test_out.pdf
+.streamlit/
+
