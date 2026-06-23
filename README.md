@@ -226,3 +226,17 @@ For each processed document `doc_name.ext`, the output folder will contain:
 - `summary_doc_name.pdf`: Structured PDF summary document complete with metadata tables.
 - `analytics_doc_name.json`: Full metadata file listing word counts, volume reduction %, processing latency, keywords (with weights), topic classification scores, and sentiment probabilities.
 - `batch_processing_report.csv`: An aggregated index tracking performance details of all processed files.
+
+---
+
+## 👥 Contributors & Roles
+
+Briefly.AI is designed and developed by:
+
+* **Edupulapati Sai Praneeth**
+  * **Role:** Lead System Architect & Backend Developer
+  * **Responsibilities:** Designed the hierarchical recursive chunk-summarization pipeline, built the document parser and extraction utility module ([utils.py](file:///d:/summariser/utils.py)), integrated remote Cloud APIs (Gemini 1.5 Flash & Hugging Face Serverless endpoints), and implemented local resource optimization configurations.
+
+* **Pasam Sanjana**
+  * **Role:** Full-Stack Developer & NLP Engineer
+  * **Responsibilities:** Built the interactive web dashboard ([app.py](file:///d:/summariser/app.py)) with custom dark styling and dynamic data charts (Plotly), developed zero-shot NLP classification pipelines for topic/sentiment analysis, implemented KeyBERT keyword extraction modules, and structured the CLI batch processing execution utility.
