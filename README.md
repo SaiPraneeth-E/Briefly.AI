@@ -231,12 +231,12 @@ For each processed document `doc_name.ext`, the output folder will contain:
 
 ## 👥 Contributors & Roles
 
-Briefly.AI is designed and developed by:
+### Edupulapati Sai Praneeth (NLP Engineer & Backend Developer)
 
-* **Edupulapati Sai Praneeth**
-  * **Role:** Lead System Architect & Backend Developer
-  * **Responsibilities:** Designed the hierarchical recursive chunk-summarization pipeline, built the document parser and extraction utility module ([utils.py](file:///d:/summariser/utils.py)), integrated remote Cloud APIs (Gemini 1.5 Flash & Hugging Face Serverless endpoints), and implemented local resource optimization configurations.
+* Developed the NLP pipeline for document summarization, keyword extraction, topic detection, and sentiment analysis.
+* Built document processing modules, including text extraction, hierarchical chunking, and AI model integration.
 
-* **Pasam Sanjana**
-  * **Role:** Full-Stack Developer & NLP Engineer
-  * **Responsibilities:** Built the interactive web dashboard ([app.py](file:///d:/summariser/app.py)) with custom dark styling and dynamic data charts (Plotly), developed zero-shot NLP classification pipelines for topic/sentiment analysis, implemented KeyBERT keyword extraction modules, and structured the CLI batch processing execution utility.
+### Pasam Sesha Srinivasa Sanjana (Full-Stack Developer & System Architect)
+
+* Developed the interactive Streamlit dashboard with analytics visualizations and user-focused features.
+* Designed the application architecture and implemented backend integrations for seamless end-to-end functionality.
