@@ -236,7 +236,7 @@ For each processed document `doc_name.ext`, the output folder will contain:
 * Developed the NLP pipeline for document summarization, keyword extraction, topic detection, and sentiment analysis.
 * Built document processing modules, including text extraction, hierarchical chunking, and AI model integration.
 
-### Pasam Sanjana (Full-Stack Developer & System Architect)
+### Pasam Sesha Srinivasa Sanjana (Full-Stack Developer & System Architect)
 
 * Developed the interactive Streamlit dashboard with analytics visualizations and user-focused features.
 * Designed the application architecture and implemented backend integrations for seamless end-to-end functionality.
