@@ -264,12 +264,12 @@ class DocumentSummarizerPipeline:
             
         return chunks
 
-    def _get_length_bounds(self, length_setting: str, chunk_tokens: int) -> Tuple[int, int]:
+    def _get_length_bounds(self, length_setting: str, chunk_tokens: int, model_max_len: int = 1024) -> Tuple[int, int]:
         """
         Gets min/max length parameters based on requested summarization length and input token count.
         """
         # Adapt length boundaries relative to chunk size
-        factor = min(1.0, chunk_tokens / 1024.0)
+        factor = min(1.0, chunk_tokens / float(model_max_len))
         
         if length_setting == "short":
             max_len = int(80 * factor)
@@ -297,7 +297,12 @@ class DocumentSummarizerPipeline:
             # Too short to summarize, return as is
             return chunk_text
             
-        min_len, max_len = self._get_length_bounds(length_setting, token_count)
+        # Determine max length dynamically
+        model_max_len = getattr(self.tokenizer, "model_max_length", 1024)
+        if not isinstance(model_max_len, int) or model_max_len > 4096 or model_max_len <= 0:
+            model_max_len = 1024
+
+        min_len, max_len = self._get_length_bounds(length_setting, token_count, model_max_len)
         
         try:
             # Some models like Flan-T5 benefit from a prefix instruction
@@ -306,21 +311,23 @@ class DocumentSummarizerPipeline:
                 inputs = f"summarize: {chunk_text}"
                 
             if self.hf_api_token:
+                params = {
+                    "max_length": max_len,
+                    "min_length": min_len,
+                    "num_beams": num_beams,
+                    "length_penalty": length_penalty
+                }
+                if num_beams == 1 and temperature > 0.1:
+                    params["temperature"] = temperature
                 payload = {
                     "inputs": inputs,
-                    "parameters": {
-                        "max_length": max_len,
-                        "min_length": min_len,
-                        "temperature": temperature if (num_beams == 1 and temperature > 0.1) else None,
-                        "num_beams": num_beams,
-                        "length_penalty": length_penalty
-                    }
+                    "parameters": params
                 }
                 res = self._query_hf_api(self.summarizer_model_name, payload)
                 return res[0]["summary_text"].strip()
             else:
                 device = get_device_str()
-                model_inputs = self.tokenizer(inputs, max_length=1024, truncation=True, return_tensors="pt").to(device)
+                model_inputs = self.tokenizer(inputs, max_length=model_max_len, truncation=True, return_tensors="pt").to(device)
                 
                 do_sample = False
                 if num_beams == 1 and temperature > 0.1:
@@ -334,7 +341,8 @@ class DocumentSummarizerPipeline:
                     temperature=temperature if do_sample else None,
                     num_beams=num_beams,
                     length_penalty=length_penalty,
-                    early_stopping=True
+                    early_stopping=True if num_beams > 1 else False,
+                    no_repeat_ngram_size=3
                 )
                 return self.tokenizer.decode(summary_ids[0], skip_special_tokens=True).strip()
         except Exception as e:
@@ -356,9 +364,14 @@ class DocumentSummarizerPipeline:
         
         Returns (summary_text, number_of_chunks_processed).
         """
-        MAX_CHUNK_TOKENS = 1024    # Use model's full context window (was 800)
+        # Determine model_max_length dynamically
+        model_max_len = getattr(self.tokenizer, "model_max_length", 1024)
+        if not isinstance(model_max_len, int) or model_max_len > 4096 or model_max_len <= 0:
+            model_max_len = 1024
+
+        MAX_CHUNK_TOKENS = model_max_len
         MAX_CHUNKS = 15            # Hard cap — prevents runaway processing
-        COMPRESS_THRESHOLD = 5000  # Tokens above which extractive compression activates
+        COMPRESS_THRESHOLD = MAX_CHUNK_TOKENS * 5  # Tokens above which extractive compression activates
         
         # Phase 1: Fast estimation to decide processing strategy
         estimated_tokens = self._fast_token_estimate(text)
@@ -758,8 +771,13 @@ Document Text:
             response = requests.post(api_url, headers=headers, json=payload, timeout=40)
             if response.status_code == 200:
                 res_json = response.json()
-                text_response = res_json['candidates'][0]['content']['parts'][0]['text']
-                data = json.loads(text_response.strip())
+                text_response = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+                # Clean potential markdown wrapping
+                if text_response.startswith("```"):
+                    text_response = re.sub(r"^```(?:json)?\n", "", text_response)
+                    text_response = re.sub(r"\n```$", "", text_response)
+                    text_response = text_response.strip()
+                data = json.loads(text_response)
                 return data
             else:
                 raise ValueError(f"Gemini API returned status code {response.status_code}: {response.text}")
