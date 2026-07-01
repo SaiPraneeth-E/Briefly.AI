@@ -169,8 +169,8 @@ def main():
     parser.add_argument("--gemini-key", help="Google Gemini API Key (for remote Gemini 1.5 Flash API)")
     
     # Model parameters
-    parser.add_argument("--model", "-m", default="sshleifer/distilbart-cnn-12-6", 
-                        help="Hugging Face summarizer model name (default: sshleifer/distilbart-cnn-12-6)")
+    parser.add_argument("--model", "-m", default="sshleifer/distilbart-cnn-6-6", 
+                        help="Hugging Face summarizer model name (default: sshleifer/distilbart-cnn-6-6, fastest CPU option)")
     parser.add_argument("--classifier-model", default="valhalla/distilbart-mnli-12-6",
                         help="Hugging Face zero-shot classifier model name")
     
@@ -190,6 +190,12 @@ def main():
     parser.add_argument("--concurrency", "-c", type=int, default=4, help="Max parallel API workers")
     parser.add_argument("--topics", default="Technology, Finance, Healthcare, Education, Research, Business, Legal, Government",
                         help="Comma-separated candidate topics")
+    parser.add_argument("--onnx", action="store_true", default=True,
+                        help="Enable ONNX Runtime acceleration for CPU (default: enabled, falls back to PyTorch if not installed)")
+    parser.add_argument("--no-onnx", action="store_true", default=False,
+                        help="Disable ONNX Runtime acceleration (force PyTorch)")
+    parser.add_argument("--turbo", action="store_true", default=False,
+                        help="Maximum speed mode: greedy decoding (1 beam) + aggressive compression")
     
     args = parser.parse_args()
     
@@ -212,13 +218,21 @@ def main():
         
     print(f"Found {len(files_to_process)} documents to process.")
     
+    # Apply turbo mode overrides
+    if args.turbo:
+        args.beams = 1
+        print("Turbo mode enabled: greedy decoding (1 beam) for maximum speed.")
+    
+    use_onnx = args.onnx and not args.no_onnx
+    
     # Instantiate Pipeline
-    print(f"Initializing AI Pipeline (Model: {args.model})...")
+    print(f"Initializing AI Pipeline (Model: {args.model}, ONNX: {use_onnx})...")
     pipeline = DocumentSummarizerPipeline(
         summarizer_model_name=args.model,
         classifier_model_name=args.classifier_model,
         hf_api_token=args.hf_token or "",
-        gemini_api_key=args.gemini_key or ""
+        gemini_api_key=args.gemini_key or "",
+        use_onnx=use_onnx
     )
     
     # Determine concurrency

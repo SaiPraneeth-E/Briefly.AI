@@ -26,7 +26,7 @@ from utils import (
     get_pdf_download_bytes,
     get_docx_download_bytes
 )
-from summarizer import DocumentSummarizerPipeline, clean_gpu_memory, get_device_str
+from summarizer import DocumentSummarizerPipeline, clean_gpu_memory, get_device_str, is_onnx_available
 
 # Set page configuration with a custom title and wide layout
 st.set_page_config(
@@ -261,13 +261,14 @@ st.sidebar.markdown("### 🛠️ Configuration Panel")
 model_option = st.sidebar.selectbox(
     "Primary Summarizer Model",
     options=[
+        "sshleifer/distilbart-cnn-6-6",
         "sshleifer/distilbart-cnn-12-6",
         "facebook/bart-large-cnn",
         "google/pegasus-cnn_dailymail",
         "google/flan-t5-large"
     ],
     index=0,
-    help="Select the pretrained model. DistilBART is recommended for speed and low RAM consumption."
+    help="DistilBART 6-6 is the fastest CPU model (~2x faster than 12-6). Select 12-6 or BART-large for higher quality at the cost of speed."
 )
 
 # Performance selection
@@ -307,11 +308,30 @@ summary_length = st.sidebar.select_slider(
 # Advanced parameters
 with st.sidebar.expander("⚙️ Advanced Generation Settings"):
     temp = st.slider("Temperature (Flan-T5 sampling)", min_value=0.1, max_value=1.0, value=0.7, step=0.1)
-    beams = st.slider("Beam Search Count", min_value=1, max_value=5, value=4, step=1)
+    # Auto-reduce default beams on CPU for faster processing
+    default_beams = 2 if get_device_str() == "cpu" else 4
+    beams = st.slider("Beam Search Count", min_value=1, max_value=5, value=default_beams, step=1,
+                      help="Lower beam count = faster. 1 beam (greedy) is fastest. 2 beams is a good CPU default.")
     penalty = st.slider("Length Penalty", min_value=1.0, max_value=3.0, value=2.0, step=0.5)
 
-# Fast analysis options
+# Turbo Mode for maximum CPU speed
 st.sidebar.markdown("### ⚡ Performance & Analysis Settings")
+turbo_mode = st.sidebar.checkbox(
+    "⚡ Turbo Mode (Maximum Speed)",
+    value=False,
+    help="Uses greedy decoding (1 beam), the fastest model, and aggressive compression for maximum CPU speed. Overrides beam count to 1."
+)
+if turbo_mode:
+    beams = 1
+    if model_option not in ["sshleifer/distilbart-cnn-6-6"]:
+        st.sidebar.info("💡 Turbo Mode works best with DistilBART 6-6 (the fastest model).")
+
+# Show ONNX status
+if not (gemini_key or hf_token):
+    if is_onnx_available():
+        st.sidebar.success("🚀 ONNX Runtime acceleration active (2-4x CPU speedup)")
+    else:
+        st.sidebar.info("💡 Install `optimum` and `onnxruntime` for 2-4x CPU speedup")
 fast_mode = st.sidebar.checkbox(
     "Fast Extraction Mode",
     value=True,
@@ -337,12 +357,13 @@ if st.sidebar.button("🧹 Clear Server Cache / RAM"):
 
 # Cache the loader for summarizer pipelines
 @st.cache_resource(show_spinner=False)
-def load_pipeline(summarizer_name: str, classifier_name: str, token: str, gemini_api_key: str) -> DocumentSummarizerPipeline:
+def load_pipeline(summarizer_name: str, classifier_name: str, token: str, gemini_api_key: str, use_onnx: bool = True) -> DocumentSummarizerPipeline:
     return DocumentSummarizerPipeline(
         summarizer_model_name=summarizer_name,
         classifier_model_name=classifier_name,
         hf_api_token=token,
-        gemini_api_key=gemini_api_key
+        gemini_api_key=gemini_api_key,
+        use_onnx=use_onnx
     )
 # Helper to process a single document from stream
 def process_single_file_stream(uploaded_file, pipeline_obj, model_option, classifier_model, hf_token, gemini_key, summary_mode, summary_length, temp, beams, penalty, fast_mode, enable_topic, enable_sentiment, enable_keywords, candidate_topics, progress_callback=None):

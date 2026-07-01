@@ -12,3 +12,5 @@ fpdf2>=2.7.0
 sentence-transformers>=2.2.0
 scikit-learn>=1.0.0
 sentencepiece>=0.1.99
+optimum>=1.16.0
+onnxruntime>=1.16.0
